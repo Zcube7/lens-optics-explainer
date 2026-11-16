@@ -14,6 +14,7 @@
 
   var st = { lens: 'z85f18', body: 'FX', fBase: 85, N: 1.8, D: 2600, lock: false, lockK: 0, af: true, fd: 2600, tc: false, yaw: 0, pitch: 0 };
   var el = {}, bands = [], quads = [], dashes = [], K = 1000, stops = [];
+  var glr = null;            // WebGL 渲染器（vf-gl.js）；没有或还没编译好时用下面的 CSS 版场景
 
   var PRESETS = {
     portrait: { name: '人像 85mm f/1.8', lens: 'z85f18', N: 1.8, D: 2600 },
@@ -54,6 +55,16 @@
       o.svg = o.el.firstChild; var vb = o.svg.getAttribute('viewBox').split(' '); o.vw = +vb[2]; o.vh = +vb[3]; o.vb = '';
     });
     S.LIGHTS.forEach(function (l) { l.el = div('vf-light'); });
+    // WebGL 版：着色器在后台编译，好了再切过去（地址加 ?nogl 可以强制用 CSS 版）
+    if (window.VFGL && !/[?&]nogl\b/.test(location.search)) {
+      el.canvas = document.createElement('canvas'); el.canvas.className = 'vf-canvas';
+      el.frame.insertBefore(el.canvas, el.scene.nextSibling);
+      try { glr = window.VFGL.create(el.canvas, S); } catch (e) { console.warn('[取景器] WebGL 初始化失败', e); glr = null; }
+      if (glr) {
+        glr.onready = function () { el.scene.style.display = 'none'; el.canvas.style.display = 'block'; update(); };
+        glr.onlost = function () { el.scene.style.display = ''; el.canvas.style.display = 'none'; update(); };
+      }
+    }
   }
 
   function hide(e) { if (e.style.display !== 'none') e.style.display = 'none'; }
@@ -81,6 +92,13 @@
     function blurPx(zm) { return O.blurDisc(c.f, c.N, c.s, Math.max(zm * 1000, c.f * 1.2)) * ppm; }
     function zi(z) { return Math.round(20100 - 1000 * Math.log(Math.max(z, 0.05))); }
 
+    var useGL = !!(glr && glr.ready && !glr.failed);
+    if (useGL) {
+      var down = O.stopsBetween(O.maxApertureAt(c.L, st.fBase), st.N);
+      glr.set({ cssW: W, cssH: H, K: K, cam: [0, S.CAM_H, camZ], right: [cy, 0, -sy], up: [-sy * sp, cp, -cy * sp], fwd: [sy * cp, sp, cy * cp],
+        A: c.f / (2 * c.N) / 1000, invS: isFinite(c.s) ? 1000 / c.s : 0, polyAmt: U.clamp((down - 0.35) / 2, 0, 1), blades: c.L.blades });
+    }
+    if (!useGL) {
     // 天空：按仰角算渐变
     var stopsCss = [];
     for (var i = SKY.length - 1; i >= 0; i--) {
@@ -156,15 +174,20 @@
       l.el.style.borderRadius = big && poly ? '0' : '50%';
     });
 
+    }
+
     // 对焦框（主体的脸）
-    var face = proj(0, 1.53, 0), cSub = O.blurDisc(c.f, c.N, c.s, st.D), sharp = cSub <= c.sen.coc * 1.2;
+    var face = proj(0, useGL ? 1.56 : 1.53, 0), cSub = O.blurDisc(c.f, c.N, c.s, st.D), sharp = cSub <= c.sen.coc * 1.2;
     if (face.z > 0.1 && face.x > 0 && face.x < W && face.y > 0 && face.y < H) {
       el.focus.style.display = 'block'; el.focus.style.left = face.x.toFixed(0) + 'px'; el.focus.style.top = face.y.toFixed(0) + 'px';
       el.focus.className = 'vf-focus' + (sharp ? '' : ' miss');
     } else el.focus.style.display = 'none';
 
     var faceIn = el.focus.style.display !== 'none', moonIn = false;
-    S.OBJ.forEach(function (o) { if (o.k === 'moon') moonIn = o.el.style.display !== 'none'; });
+    S.OBJ.forEach(function (o) {
+      if (o.k !== 'moon') return;
+      var mp = proj(o.X, o.y0 + o.h / 2, o.Z); moonIn = mp.z > 0 && mp.x > 0 && mp.x < W && mp.y > 0 && mp.y < H;
+    });
     readouts(c, cSub, sharp, faceIn, moonIn);
   }
 
@@ -296,5 +319,5 @@
     refresh();
   }
 
-  window.Viewfinder = { init: init, preset: preset, setLens: setLens, state: st, update: update, cur: cur, PRESETS: PRESETS };
+  window.Viewfinder = { gl: function () { return glr; }, init: init, preset: preset, setLens: setLens, state: st, update: update, cur: cur, PRESETS: PRESETS };
 })();

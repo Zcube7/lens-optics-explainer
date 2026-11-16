@@ -367,7 +367,7 @@
 <section class="block" id="viewfinder">
   <div class="wrap">
     <div class="block-head"><span class="no">03</span><h2>虚拟取景器</h2></div>
-    <p class="block-intro">一条傍晚的小路：主体站在路上，身后有路牌、路灯、彩灯、树、楼和月亮，每样东西都有真实的大小和距离。画面里的取景范围和模糊程度按前面的公式逐个算出。在画面上拖动可以转动相机。</p>
+    <p class="block-intro">一条傍晚的小路：主体站在路上，身后有路牌、路灯、彩灯、树、楼和月亮，每样东西都有真实的大小和距离。画面是按薄透镜的光路实时渲染的：每个像素的光线从光圈面上随机一点出发，累加几百次后收敛，所以虚化、前后遮挡和光斑形状都是算出来的，不是后期模糊。在画面上拖动可以转动相机。</p>
     <div class="vf-shell">
       <div class="vf-top">
         <div class="vf-frame" id="vf-frame">
@@ -451,7 +451,7 @@
   <div class="wrap">
     <p>这不是尼康官方页面。Nikon、NIKKOR 及各产品名称是株式会社尼康的商标，这里只作为举例使用。</p>
     <p>镜头参数取自尼康官网产品规格页（2026 年 11 月核对）。光学计算用的是薄透镜近似，目的是讲清原理：真实镜头的呼吸效应、口径蚀、像差没有计入，数值与实拍会有出入。</p>
-    <p>产品图、镜片结构图和 MTF 曲线图直接引用自尼康官网（imaging.nikon.com），版权归株式会社尼康所有，没有存进本站的代码仓库。等比例轮廓和取景器里的场景是自绘的示意图。</p>
+    <p>产品图、镜片结构图和 MTF 曲线图直接引用自尼康官网（imaging.nikon.com），版权归株式会社尼康所有，没有存进本站的代码仓库。等比例轮廓和取景器里的场景是程序生成的，不是实拍照片。</p>
   </div>
 </footer>
 
@@ -467,6 +467,8 @@
 <script src="js/official.js"></script>
 <script src="js/nikon.js"></script>
 <script src="js/vf-scene.js"></script>
+<script src="js/vf-shader.js"></script>
+<script src="js/vf-gl.js"></script>
 <script src="js/viewfinder.js"></script>
 <script src="js/main.js"></script>
 </body>
