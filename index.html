@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>镜头是怎么成像的 · 焦距与光圈原理演示（以尼康 Z 镜头为例）</title>
+<meta name="description" content="可交互的镜头成像原理演示：薄透镜成像、焦距与视角、光圈与进光量、景深与虚化、透视压缩、衍射，并用尼康 Z 卡口镜头的真实参数举例。">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><i></i><span>镜头成像原理</span></a>
+    <nav class="nav" id="nav">
+      <a href="#principle">原理</a>
+      <a href="#nikon">尼康镜头</a>
+      <a href="#viewfinder">虚拟取景器</a>
+      <a href="#choose">怎么选</a>
+      <a href="#sheet">速查</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <h1>镜头是怎么<em>成像</em>的</h1>
+    <p class="lead">焦距决定「看多宽」，光圈决定「进多少光、虚多少」。这一页用可以拖动的示意图把这两件事讲清楚，再拿尼康 Z 卡口镜头的真实参数对一遍。</p>
+    <div class="hero-cards">
+      <a class="hero-card" href="#principle"><small>01</small><b>原理</b><span>成像、焦距、光圈、景深、透视、衍射</span></a>
+      <a class="hero-card" href="#nikon"><small>02</small><b>尼康镜头</b><span>20 支 Z 卡口镜头的参数与读法</span></a>
+      <a class="hero-card" href="#viewfinder"><small>03</small><b>虚拟取景器</b><span>换镜头、调光圈，看画面怎么变</span></a>
+      <a class="hero-card" href="#choose"><small>04</small><b>怎么选</b><span>按拍什么来挑焦段和光圈</span></a>
+      <a class="hero-card" href="#sheet"><small>05</small><b>速查</b><span>公式和几个常见误区</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 板块一 ================= -->
+<section class="block" id="principle">
+  <div class="wrap">
+    <div class="block-head"><span class="no">01</span><h2>原理</h2></div>
+    <p class="block-intro">镜头只做一件事：把物体上每个点发出的光，重新汇聚成传感器上的一个点。下面六个小节都是这句话的展开。</p>
+
+    <!-- 1.1 -->
+    <article class="topic" id="p-imaging">
+      <h3><span class="idx">1.1</span>从小孔到透镜</h3>
+      <p>在暗箱上开一个小孔，外面的景物就会倒着投在对面的墙上——每个物点只有一条细光束能穿过小孔，落在唯一的位置。孔越小像越清楚，但也越暗。透镜解决了这个矛盾：它把同一个物点发出的<b>一大束</b>光折回同一个点。</p>
+      <div class="demo">
+        <div class="stage-pair">
+          <div id="pinhole-a"></div>
+          <div id="pinhole-b"></div>
+        </div>
+      </div>
+      <p>代价是：透镜只能让某一个距离上的物体精确汇聚。物距 <i>u</i>、像距 <i>v</i>、焦距 <i>f</i> 满足 <span class="formula">1/f = 1/u + 1/v</span>。拖动下图里的物体试试。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">薄透镜成像 · 拖动黄色箭头</span><div id="img-stage"></div></div>
+          <div class="panel">
+            <label class="ctl"><span class="name">焦距 f</span><output id="img-f-out"></output>
+              <input type="range" id="img-f" min="30" max="150" step="1" value="70"></label>
+            <label class="ctl"><span class="name">物距 u</span><output id="img-u-out"></output>
+              <input type="range" id="img-u" min="20" max="420" step="1" value="230"></label>
+            <div class="stats">
+              <div class="stat hl"><span class="k">像距 v</span><span class="v" id="img-v"></span></div>
+              <div class="stat"><span class="k">放大倍率 m</span><span class="v" id="img-m"></span></div>
+            </div>
+            <div class="verdict" id="img-verdict"></div>
+            <div class="chips" id="img-presets">
+              <button class="chip" data-u="far">远处 (u≫f)</button>
+              <button class="chip" data-u="2f">u = 2f</button>
+              <button class="chip" data-u="near">f &lt; u &lt; 2f</button>
+              <button class="chip" data-u="in">u &lt; f</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>焦距的定义。</b>物体在无穷远时 v = f。焦距就是「无穷远的像离镜片多远」。</li>
+        <li><b>对焦在做什么。</b>物体靠近，像面后移。对焦就是移动镜片组，让像重新落回传感器。</li>
+        <li><b>最近对焦距离。</b>物体越近，镜片要伸出越多；u 小于 f 时光线不再汇聚，只剩放大镜式的虚像。</li>
+        <li><b>1:1 微距。</b>u = 2f 时像和物一样大，这是微距镜头的工作位置。</li>
+      </ul>
+    </article>
+
+    <!-- 1.2 -->
+    <article class="topic" id="p-focal">
+      <h3><span class="idx">1.2</span>焦距决定视角</h3>
+      <p>传感器的大小是固定的。焦距越长，传感器离镜头的光学中心越远，它「张开」的角度就越小：<span class="formula">视角 = 2·arctan( 传感器边长 / 2f )</span>。视角窄，等于把远处的一小块景物铺满整个画面。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage-pair">
+            <div class="stage"><span class="stage-cap">俯视图 · 相机能看到的范围</span><div id="fov-top"></div></div>
+            <div class="stage"><span class="stage-cap">同一位置 · 各焦距拍到的画面范围</span><div id="fov-frame"></div></div>
+          </div>
+          <div class="panel">
+            <label class="ctl"><span class="name">焦距</span><output id="fov-f-out"></output>
+              <input type="range" id="fov-f" min="0" max="1000" step="1" value="315"></label>
+            <div class="chips" id="fov-chips"></div>
+            <div class="chips-label">传感器画幅</div>
+            <div class="chips" id="fov-sensor">
+              <button class="chip on" data-s="FX">FX 36×24</button>
+              <button class="chip" data-s="DX">DX 23.5×15.7</button>
+            </div>
+            <div class="stats">
+              <div class="stat hl"><span class="k">水平视角</span><span class="v" id="fov-h"></span></div>
+              <div class="stat"><span class="k">对角视角</span><span class="v" id="fov-d"></span></div>
+              <div class="stat"><span class="k">垂直视角</span><span class="v" id="fov-v"></span></div>
+              <div class="stat"><span class="k">10 m 外画面宽</span><span class="v" id="fov-w10"></span></div>
+            </div>
+            <div class="verdict" id="fov-verdict"></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>焦距翻倍</b>，画面里的东西放大 2 倍，拍到的面积只剩 1/4。</li>
+        <li><b>常说的分段</b>（FX）：24mm 以下超广角，24–35mm 广角，50mm 上下标准，85–135mm 中长焦，200mm 以上长焦，500mm 以上超长焦。</li>
+        <li><b>DX 画幅</b>传感器的边长是 FX 的 1/1.5。同一支镜头装上去，焦距没变，只是拍到的范围被裁小了，相当于 FX 上 1.5 倍焦距的视角。</li>
+      </ul>
+    </article>
+
+    <!-- 1.3 -->
+    <article class="topic" id="p-aperture">
+      <h3><span class="idx">1.3</span>光圈：进光量的阀门</h3>
+      <p>镜头里有一组可以开合的叶片。从前面看进去，那个透光的孔叫入瞳，直径记作 <i>D</i>。光圈值是一个比值：<span class="formula">N = f / D</span>，写作 f/N。N 越小孔越大。因为是比值，同样是 f/2.8，24mm 镜头只要 8.6mm 的孔，400mm 镜头要 143mm。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">从镜头前方看进去</span><div id="ap-stage"></div></div>
+          <div class="panel">
+            <div class="chips-label">焦距</div>
+            <div class="chips" id="ap-focal"></div>
+            <label class="ctl"><span class="name">光圈</span><output id="ap-n-out"></output>
+              <input type="range" id="ap-n" min="0" max="28" step="1" value="6"></label>
+            <div class="chips-label">光圈叶片数</div>
+            <div class="chips" id="ap-blades">
+              <button class="chip" data-b="7">7 片</button>
+              <button class="chip on" data-b="9">9 片</button>
+              <button class="chip" data-b="11">11 片</button>
+            </div>
+            <div class="stats">
+              <div class="stat hl"><span class="k">入瞳直径 D</span><span class="v" id="ap-d"></span></div>
+              <div class="stat"><span class="k">相对 f/1.4 的进光量</span><span class="v" id="ap-stops"></span></div>
+            </div>
+            <div class="panel-row" style="grid-template-columns:1fr 1fr;gap:10px">
+              <label class="ctl"><span class="name">环境</span>
+                <select id="ap-ev">
+                  <option value="15">晴天户外</option>
+                  <option value="12" selected>阴天</option>
+                  <option value="8">明亮室内</option>
+                  <option value="5">夜晚街道</option>
+                </select></label>
+              <label class="ctl"><span class="name">ISO</span>
+                <select id="ap-iso">
+                  <option>100</option><option selected>400</option><option>1600</option><option>6400</option>
+                </select></label>
+            </div>
+            <div class="stats">
+              <div class="stat hl"><span class="k">所需快门</span><span class="v" id="ap-shutter"></span></div>
+              <div class="stat"><span class="k">手持安全快门</span><span class="v" id="ap-safe"></span></div>
+            </div>
+            <div class="verdict" id="ap-verdict"></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>一档 = 一倍。</b>N 每乘 1.4（√2），孔的面积减半，快门就要慢一倍，或者 ISO 翻倍。</li>
+        <li><b>整档序列：</b>1 · 1.4 · 2 · 2.8 · 4 · 5.6 · 8 · 11 · 16 · 22。相机上每格通常是 1/3 档。</li>
+        <li><b>叶片数的影响。</b>收小光圈后孔变成多边形，虚化光斑跟着变成多边形；点光源的星芒条数 = 偶数片 n 条、奇数片 2n 条（9 片 → 18 条）。</li>
+      </ul>
+    </article>
+
+    <!-- 1.4 -->
+    <article class="topic" id="p-dof">
+      <h3><span class="idx">1.4</span>景深与虚化</h3>
+      <p>只有对焦平面上的点能汇聚成点。更远或更近的点，光束在传感器前面或后面才交汇，落到传感器上就摊成一个圆，叫<b>模糊圆</b>。模糊圆小到看不出来（FX 画幅约 0.03mm）的那一段距离就是<b>景深</b>；远大于这个尺寸，就是虚化。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage">
+            <span class="stage-cap">镜头后方（示意，未按比例）· 光圈越大，光锥越粗，模糊圆越大</span>
+            <div id="dof-cone"></div>
+            <div id="dof-bar"></div>
+          </div>
+          <div class="panel">
+            <label class="ctl"><span class="name">焦距</span><output id="dof-f-out"></output>
+              <input type="range" id="dof-f" min="0" max="1000" step="1" value="446"></label>
+            <label class="ctl"><span class="name">光圈</span><output id="dof-n-out"></output>
+              <input type="range" id="dof-n" min="0" max="28" step="1" value="6"></label>
+            <label class="ctl"><span class="name">对焦距离</span><output id="dof-s-out"></output>
+              <input type="range" id="dof-s" min="0" max="1000" step="1" value="365"></label>
+            <label class="ctl"><span class="name">背景在主体后方</span><output id="dof-bg-out"></output>
+              <input type="range" id="dof-bg" min="0" max="1000" step="1" value="560"></label>
+            <div class="chips" id="dof-sensor">
+              <button class="chip on" data-s="FX">FX</button>
+              <button class="chip" data-s="DX">DX</button>
+            </div>
+            <div class="stats">
+              <div class="stat wide"><span class="k">清晰范围</span><span class="v" id="dof-range"></span></div>
+              <div class="stat hl"><span class="k">景深</span><span class="v" id="dof-total"></span></div>
+              <div class="stat"><span class="k">超焦距</span><span class="v" id="dof-h"></span></div>
+              <div class="stat hl wide"><span class="k">背景模糊圆</span><span class="v" id="dof-blur"></span></div>
+            </div>
+            <div class="verdict" id="dof-verdict"></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>虚化量的三个来源。</b>模糊圆 = 入瞳直径 × 主体放大倍率 × 背景离焦比例。所以：光圈开大、焦距变长、靠近主体、让背景离远，都会更虚。</li>
+        <li><b>超焦距。</b>对焦在超焦距上，从它的一半到无穷远都落在景深里。风光摄影常用：20mm f/8 的超焦距只有 1.7 米。</li>
+        <li><b>景深不是一刀切。</b>清晰到模糊是渐变的，0.03mm 只是约定的界线。高像素机身放大看，实际能用的景深更浅。</li>
+      </ul>
+    </article>
+
+    <!-- 1.5 -->
+    <article class="topic" id="p-persp">
+      <h3><span class="idx">1.5</span>透视：变的是距离，不是焦距</h3>
+      <p>远近物体在画面里的大小比例只取决于相机站在哪。所谓长焦「压缩空间」，是因为要把主体拍成同样大，长焦得退得很远——这时主体和背景到相机的距离差不多，背景就显得又大又近。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">俯视图 · 主体在画面里始终一样大（全身人像）</span><div id="persp-stage"></div></div>
+          <div class="panel">
+            <label class="ctl"><span class="name">焦距</span><output id="persp-f-out"></output>
+              <input type="range" id="persp-f" min="0" max="1000" step="1" value="315"></label>
+            <div class="chips" id="persp-chips"></div>
+            <div class="stats">
+              <div class="stat hl"><span class="k">相机到主体</span><span class="v" id="persp-d"></span></div>
+              <div class="stat"><span class="k">背景墙拍进的宽度</span><span class="v" id="persp-w"></span></div>
+              <div class="stat"><span class="k">背景相对主体的大小</span><span class="v" id="persp-r"></span></div>
+              <div class="stat"><span class="k">水平视角</span><span class="v" id="persp-a"></span></div>
+            </div>
+            <div class="verdict" id="persp-verdict"></div>
+            <a class="btn ghost" href="#viewfinder" id="persp-go">到取景器里看实际画面 ↓</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 1.6 -->
+    <article class="topic" id="p-diff">
+      <h3><span class="idx">1.6</span>衍射：光圈也不能太小</h3>
+      <p>光穿过小孔会散开。即使镜头完美无缺，一个点成的像也是一个小光斑（艾里斑），直径约 <span class="formula">2.44 · λ · N</span>，只跟光圈值有关。光斑比像素大出太多时，再收光圈只会让整张照片变软。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">传感器像素网格上的一个点（绿光 550nm）</span><div id="diff-stage"></div></div>
+          <div class="panel">
+            <label class="ctl"><span class="name">光圈</span><output id="diff-n-out"></output>
+              <input type="range" id="diff-n" min="4" max="31" step="1" value="13"></label>
+            <div class="chips-label">机身（像素间距不同）</div>
+            <div class="chips" id="diff-body"></div>
+            <div class="stats">
+              <div class="stat hl"><span class="k">艾里斑直径</span><span class="v" id="diff-airy"></span></div>
+              <div class="stat"><span class="k">像素间距</span><span class="v" id="diff-pitch"></span></div>
+            </div>
+            <div class="verdict" id="diff-verdict"></div>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>最佳光圈。</b>全开时像差最明显，收一两档最锐；继续收到 f/11 以后衍射开始占上风。多数镜头最锐的位置在 f/4–f/8。</li>
+        <li><b>像素越密越早碰到。</b>4570 万像素的机身大约 f/8 起就能看出衍射，2450 万像素的可以多收大半档。</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<!-- ================= 板块二 ================= -->
+<section class="block" id="nikon">
+  <div class="wrap">
+    <div class="block-head"><span class="no">02</span><h2>尼康镜头</h2></div>
+    <p class="block-intro">尼康无反相机用 Z 卡口，镜头品牌叫尼克尔（NIKKOR）。下面先讲名字怎么读，再把 20 支镜头的真实参数代进上面的公式。</p>
+
+    <article class="topic" id="n-name">
+      <h3><span class="idx">2.1</span>镜头名怎么读</h3>
+      <p>名字里每一段都是一个参数。点一下看含义。</p>
+      <div class="decoder">
+        <div class="chips" id="dec-examples"></div>
+        <div class="decoder-name" id="dec-name"></div>
+        <div class="decoder-exp" id="dec-exp"></div>
+      </div>
+      <div class="gloss" id="gloss"></div>
+    </article>
+
+    <article class="topic" id="n-mount">
+      <h3><span class="idx">2.2</span>Z 卡口：大口径、短法兰距</h3>
+      <p>卡口内径决定最后一片镜片能做多大，法兰距（卡口到传感器的距离）决定它能离传感器多近。Z 卡口内径 55mm、法兰距 16mm；用了近 60 年的 F 卡口是 47mm 和 46.5mm。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">卡口剖面（等比例）</span><div id="mount-stage"></div></div>
+          <div class="panel">
+            <div class="stats">
+              <div class="stat hl"><span class="k">Z 卡口内径</span><span class="v">55 mm</span></div>
+              <div class="stat hl"><span class="k">Z 法兰距</span><span class="v">16 mm</span></div>
+              <div class="stat"><span class="k">F 卡口内径</span><span class="v">47 mm</span></div>
+              <div class="stat"><span class="k">F 法兰距</span><span class="v">46.5 mm</span></div>
+            </div>
+            <div class="verdict">后组镜片更大、更靠后，光线可以更直地照到传感器边角。f/0.95 的 Noct 和 23.5mm 厚的饼干头都得益于此。</div>
+            <p class="muted" style="font-size:14px;margin:0">F 卡口镜头装上 FTZ 转接环就能用——转接环的厚度正好补上 30.5mm 的法兰距差。</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="topic" id="n-map">
+      <h3><span class="idx">2.3</span>焦段地图</h3>
+      <p>横轴是焦距（对数刻度，每一格翻一倍），一条横杠是一支镜头覆盖的范围，圆点是定焦。颜色表示最大光圈。点一下选中，下面的卡片和取景器会跟着切换。</p>
+      <div class="demo"><div class="stage" id="map-stage"></div></div>
+    </article>
+
+    <article class="topic" id="n-cards">
+      <h3><span class="idx">2.4</span>镜头图鉴</h3>
+      <p>黄色的两行是按上面的公式现算的：视角由焦距算出，入瞳直径 = 焦距 ÷ 光圈值。镜身轮廓按真实的直径和长度等比例画，可以直接比大小。带 * 的数值见卡片下方的小注。</p>
+      <div class="chips" id="card-filters"></div>
+      <div class="cards" id="cards"></div>
+    </article>
+  </div>
+</section>
+
+<!-- ================= 板块三 ================= -->
+<section class="block" id="viewfinder">
+  <div class="wrap">
+    <div class="block-head"><span class="no">03</span><h2>虚拟取景器</h2></div>
+    <p class="block-intro">一条傍晚的小路：主体站在路上，身后有路牌、路灯、彩灯、树、楼和月亮，每样东西都有真实的大小和距离。画面里的取景范围和模糊程度按前面的公式逐个算出。在画面上拖动可以转动相机。</p>
+    <div class="vf-shell">
+      <div class="vf-top">
+        <div class="vf-frame" id="vf-frame">
+          <div class="vf-scene" id="vf-scene"></div>
+          <div class="vf-focus" id="vf-focus"></div>
+          <div class="vf-tip">拖动画面转动相机</div>
+          <div class="vf-hud" id="vf-hud"></div>
+        </div>
+        <div class="vf-side">
+          <label class="ctl"><span class="name">镜头</span>
+            <select id="vf-lens"></select></label>
+          <div class="chips" id="vf-body">
+            <button class="chip on" data-s="FX">FX 机身</button>
+            <button class="chip" data-s="DX">DX 机身</button>
+          </div>
+          <label class="ctl"><span class="name">焦距</span><output id="vf-f-out"></output>
+            <input type="range" id="vf-f" min="0" max="1000" step="1" value="0"></label>
+          <label class="ctl"><span class="name">光圈</span><output id="vf-n-out"></output>
+            <input type="range" id="vf-n" min="0" max="10" step="1" value="0"></label>
+          <label class="ctl"><span class="name">相机到主体</span><output id="vf-d-out"></output>
+            <input type="range" id="vf-d" min="0" max="1000" step="1" value="350"></label>
+          <label class="check"><input type="checkbox" id="vf-lock">锁定主体大小（变焦时自动走位）</label>
+          <label class="check"><input type="checkbox" id="vf-af" checked>对焦在主体上</label>
+          <label class="ctl" id="vf-fd-wrap"><span class="name">对焦距离</span><output id="vf-fd-out"></output>
+            <input type="range" id="vf-fd" min="0" max="1000" step="1" value="350" disabled></label>
+          <label class="check" id="vf-tc-wrap" hidden><input type="checkbox" id="vf-tc">启用内置 1.4× 增距镜</label>
+        </div>
+      </div>
+      <div class="vf-bottom">
+        <div class="presets" id="vf-presets"></div>
+        <div class="stats cols-auto">
+          <div class="stat hl"><span class="k">水平视角</span><span class="v" id="vf-aov"></span></div>
+          <div class="stat"><span class="k">入瞳直径</span><span class="v" id="vf-pupil"></span></div>
+          <div class="stat"><span class="k">清晰范围</span><span class="v" id="vf-dof"></span></div>
+          <div class="stat hl"><span class="k">远景模糊圆</span><span class="v" id="vf-blur"></span></div>
+          <div class="stat"><span class="k">主体放大倍率</span><span class="v" id="vf-mag"></span></div>
+          <div class="stat"><span class="k">月亮在画面里</span><span class="v" id="vf-moon"></span></div>
+        </div>
+        <div class="verdict" id="vf-verdict"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 板块四 ================= -->
+<section class="block" id="choose">
+  <div class="wrap">
+    <div class="block-head"><span class="no">04</span><h2>怎么选</h2></div>
+    <p class="block-intro">先想清楚拍什么、能站多近，焦段就定了；再看光线和要不要虚化，光圈就定了。</p>
+    <div class="pick" id="pick"></div>
+  </div>
+</section>
+
+<!-- ================= 板块五 ================= -->
+<section class="block" id="sheet">
+  <div class="wrap">
+    <div class="block-head"><span class="no">05</span><h2>速查</h2></div>
+    <div class="sheet">
+      <div><b>成像公式</b><code>1/f = 1/u + 1/v</code><span>u 物距，v 像距。无穷远时 v = f。</span></div>
+      <div><b>放大倍率</b><code>m = v/u = f/(u − f)</code><span>m = 1 即 1:1 微距，此时 u = 2f。</span></div>
+      <div><b>视角</b><code>θ = 2·arctan(d / 2f)</code><span>d 取传感器的宽、高或对角线。FX：36 / 24 / 43.3mm。</span></div>
+      <div><b>光圈值</b><code>N = f / D</code><span>D 入瞳直径。进光量 ∝ 1/N²。</span></div>
+      <div><b>曝光值</b><code>EV = log₂(N² / t)</code><span>t 快门秒数（ISO 100）。EV 加 1 = 光少一半。</span></div>
+      <div><b>超焦距</b><code>H = f²/(N·c) + f</code><span>c 容许模糊圆：FX 0.03mm，DX 0.02mm。</span></div>
+      <div><b>景深</b><code>近点 = s(H−f)/(H+s−2f)
+远点 = s(H−f)/(H−s)</code><span>s 对焦距离。s ≥ H 时远点为无穷远。</span></div>
+      <div><b>模糊圆</b><code>c = (f²/N)·|d−s| / (d·(s−f))</code><span>对焦在 s，距离 d 处的点在传感器上的光斑直径。</span></div>
+      <div><b>艾里斑</b><code>直径 ≈ 2.44·λ·N</code><span>λ = 550nm 时约 1.34·N 微米。</span></div>
+    </div>
+    <div class="myths">
+      <details><summary>焦距越长，景深越浅</summary><p>只在站着不动时成立。如果把主体拍成一样大（长焦退远），同样光圈值下景深几乎一样。长焦显得更虚，是因为它把背景连同模糊一起放大了。</p></details>
+      <details><summary>长焦镜头会压缩空间</summary><p>压缩来自拍摄距离。站在同一个位置用广角拍，再把中间裁出来，透视和长焦拍的完全一样，只是像素少了。</p></details>
+      <details><summary>光圈越小，照片越清晰</summary><p>收小光圈景深变大，但衍射也变强。高像素机身上 f/16 的整体锐度明显不如 f/5.6。</p></details>
+      <details><summary>等效焦距就是镜头焦距变了</summary><p>焦距是镜头的物理属性，装到哪台机身上都不变。DX 机身只是用更小的传感器截取了画面中间，视角相当于 1.5 倍焦距；虚化量也要按光圈值乘 1.5 来对比（DX 上 f/1.8 ≈ FX 上 f/2.8 的虚化）。</p></details>
+      <details><summary>同样是 f/2.8，大镜头进光更多</summary><p>就单位面积的亮度（也就是曝光）来说，f/2.8 都一样，快门和 ISO 不用变。镜头大是因为焦距长，要凑出同样的比值就需要更大的孔。</p></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>这不是尼康官方页面。Nikon、NIKKOR 及各产品名称是株式会社尼康的商标，这里只作为举例使用。</p>
+    <p>镜头参数取自尼康官网产品规格页（2026 年 11 月核对）。光学计算用的是薄透镜近似，目的是讲清原理：真实镜头的呼吸效应、口径蚀、像差没有计入，数值与实拍会有出入。</p>
+    <p>镜身轮廓、取景器里的场景都是示意图，不是产品外观。</p>
+  </div>
+</footer>
+
+<script src="js/optics.js"></script>
+<script src="js/lenses.js"></script>
+<script src="js/util.js"></script>
+<script src="js/demo-imaging.js"></script>
+<script src="js/demo-fov.js"></script>
+<script src="js/demo-aperture.js"></script>
+<script src="js/demo-dof.js"></script>
+<script src="js/demo-extra.js"></script>
+<script src="js/nikon.js"></script>
+<script src="js/vf-scene.js"></script>
+<script src="js/viewfinder.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
