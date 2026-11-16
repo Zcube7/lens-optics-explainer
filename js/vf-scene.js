@@ -117,7 +117,7 @@
   })();
   OBJ.push({ k: 'hills', X: 0, Z: 3200, w: 9000, h: 520 });
   // 月亮：视直径 0.52°，方位 7°、仰角 9.5°，按无穷远处理
-  var MOON = { az: 7, el: 9.5, dia: 0.52 }, MZ = 1e7, R = Math.PI / 180;
+  var MOON = { az: -9, el: 31, dia: 0.52 }, MZ = 1e7, R = Math.PI / 180;
   OBJ.push({ k: 'moon', X: MZ * Math.tan(MOON.az * R), Z: MZ, w: 2 * MZ * Math.tan(MOON.dia / 2 * R), h: 2 * MZ * Math.tan(MOON.dia / 2 * R),
     y0: MZ * Math.tan(MOON.el * R) - MZ * Math.tan(MOON.dia / 2 * R), far: true });
   [-1.3, -3.5, -7, -12, -19, -30, -46, -70, -100, 1.5, 6, 13].forEach(function (z, i) {

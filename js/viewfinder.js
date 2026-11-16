@@ -14,7 +14,7 @@
 
   var st = { lens: 'z85f18', body: 'FX', fBase: 85, N: 1.8, D: 2600, lock: false, lockK: 0, af: true, fd: 2600, tc: false, yaw: 0, pitch: 0 };
   var el = {}, bands = [], quads = [], dashes = [], K = 1000, stops = [];
-  var glr = null;            // WebGL 渲染器（vf-gl.js）；没有或还没编译好时用下面的 CSS 版场景
+  var glr = null;            // 3D 渲染器（vf-three.js）；没有或还没加载好时用下面的 CSS 版场景
 
   var PRESETS = {
     portrait: { name: '人像 85mm f/1.8', lens: 'z85f18', N: 1.8, D: 2600 },
@@ -55,15 +55,38 @@
       o.svg = o.el.firstChild; var vb = o.svg.getAttribute('viewBox').split(' '); o.vw = +vb[2]; o.vh = +vb[3]; o.vb = '';
     });
     S.LIGHTS.forEach(function (l) { l.el = div('vf-light'); });
-    // WebGL 版：着色器在后台编译，好了再切过去（地址加 ?nogl 可以强制用 CSS 版）
-    if (window.VFGL && !/[?&]nogl\b/.test(location.search)) {
-      el.canvas = document.createElement('canvas'); el.canvas.className = 'vf-canvas';
-      el.frame.insertBefore(el.canvas, el.scene.nextSibling);
-      try { glr = window.VFGL.create(el.canvas, S); } catch (e) { console.warn('[取景器] WebGL 初始化失败', e); glr = null; }
-      if (glr) {
-        glr.onready = function () { el.scene.style.display = 'none'; el.canvas.style.display = 'block'; update(); };
-        glr.onlost = function () { el.scene.style.display = ''; el.canvas.style.display = 'none'; update(); };
-      }
+    // 3D 版（vf-three.js，ES 模块）：滚到取景器附近才开始加载素材；加载好之前显示进度，
+    // 浏览器不支持、素材加载失败、或者是双击打开的本地文件（模块和素材都读不了）时，退回上面的 CSS 版。地址加 ?nogl 可强制。
+    if (!/[?&]nogl\b/.test(location.search)) {
+      el.scene.style.visibility = 'hidden';
+      el.loading = document.createElement('div'); el.loading.className = 'vf-loading'; el.loading.textContent = '场景加载中…'; el.frame.appendChild(el.loading);
+      var fallback = function () {
+        if (glr && glr.ready) return;
+        el.scene.style.visibility = ''; el.scene.style.display = ''; el.loading.style.display = 'none';
+        if (el.canvas) el.canvas.style.display = 'none';
+        update();
+      };
+      var start = function () {
+        if (glr || !window.VF3) return;
+        el.canvas = document.createElement('canvas'); el.canvas.className = 'vf-canvas'; el.frame.insertBefore(el.canvas, el.scene.nextSibling);
+        glr = window.VF3.create(el.canvas, {
+          moon: S.MOON,
+          onprogress: function (f) { el.loading.textContent = '场景加载中 ' + Math.round(Math.min(f, 1) * 100) + '%'; },
+          onready: function () { el.scene.style.display = 'none'; el.canvas.style.display = 'block'; el.loading.style.display = 'none'; update(); },
+          onfail: function () { glr = null; fallback(); }
+        });
+        if (!glr) fallback();
+      };
+      var arm = function () {              // 滚到取景器附近再开始下载素材（约 17 MB）。不用 IntersectionObserver：页面在后台时它不回调
+        var check = function () {
+          var r = el.frame.getBoundingClientRect();
+          if (r.top < window.innerHeight + 900 && r.bottom > -900) { window.removeEventListener('scroll', check); start(); }
+        };
+        window.addEventListener('scroll', check, { passive: true }); check();
+        el.start3D = start;
+      };
+      if (window.VF3) arm();
+      else { window.addEventListener('vf3-module', arm, { once: true }); setTimeout(function () { if (!window.VF3) fallback(); }, 4000); }
     }
   }
 
@@ -177,7 +200,7 @@
     }
 
     // 对焦框（主体的脸）
-    var face = proj(0, useGL ? 1.56 : 1.53, 0), cSub = O.blurDisc(c.f, c.N, c.s, st.D), sharp = cSub <= c.sen.coc * 1.2;
+    var face = proj(0, useGL ? (glr.faceY || 1.5) : 1.53, 0), cSub = O.blurDisc(c.f, c.N, c.s, st.D), sharp = cSub <= c.sen.coc * 1.2;
     if (face.z > 0.1 && face.x > 0 && face.x < W && face.y > 0 && face.y < H) {
       el.focus.style.display = 'block'; el.focus.style.left = face.x.toFixed(0) + 'px'; el.focus.style.top = face.y.toFixed(0) + 'px';
       el.focus.className = 'vf-focus' + (sharp ? '' : ' miss');
@@ -216,8 +239,8 @@
     else if (pct < 0.09) msg = '从主体到远景全部在景深里。小光圈加广角就是这个效果，适合风光。';
     else if (pct < 0.4) msg = '主体清晰，远景略微发虚，路牌上的字还认得出。';
     else if (pct < 1.5) msg = '主体清晰，背景开始发虚：近处的路牌还读得出，越远越糊，彩灯变成小光斑。';
-    else if (pct < 3.5) msg = '主体清晰，背景明显虚化：远处的路牌读不出字，树和楼还看得出轮廓，彩灯变成光斑。';
-    else msg = '主体清晰，背景完全化开：树和楼只剩色块，每个灯都变成一个大光斑' + (c.N > O.maxApertureAt(c.L, st.fBase) * 1.3 ? '（收了光圈，光斑是 ' + c.L.blades + ' 边形）。' : '。');
+    else if (pct < 3.5) msg = '主体清晰，背景明显虚化：远处的路牌读不出字，建筑还看得出轮廓，彩灯变成光斑。';
+    else msg = '主体清晰，背景完全化开：远处的建筑只剩色块，每盏灯都变成一个大光斑' + (c.N > O.maxApertureAt(c.L, st.fBase) * 1.3 ? '（收了光圈，光斑是 ' + c.L.blades + ' 边形）。' : '。');
     if (c.L.format === 'DX' && st.body === 'FX') msg += ' 这是 DX 镜头：装在 FX 机身上也会自动裁成 DX 画幅，这里按 DX 计算。';
     el.verdict.className = cls; el.verdict.textContent = msg;
   }
@@ -252,6 +275,7 @@
 
   function preset(key) {
     var p = PRESETS[key]; if (!p) return;
+    if (el.start3D) el.start3D();
     var L = LD.byId(p.lens);
     st.lens = p.lens; st.tc = false; st.lock = false;
     st.fBase = p.f || L.fMin; st.N = p.N; st.D = p.D;
