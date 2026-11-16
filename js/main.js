@@ -11,6 +11,7 @@
   boot('aperture', window.DemoAperture);
   boot('dof', window.DemoDof);
   boot('extra', window.DemoExtra);
+  boot('mtf', window.DemoMtf);
   boot('nikon', window.NikonSection);
   boot('viewfinder', window.Viewfinder);
 

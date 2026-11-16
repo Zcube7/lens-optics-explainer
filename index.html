@@ -27,8 +27,8 @@
     <h1>镜头是怎么<em>成像</em>的</h1>
     <p class="lead">焦距决定「看多宽」，光圈决定「进多少光、虚多少」。这一页用可以拖动的示意图把这两件事讲清楚，再拿尼康 Z 卡口镜头的真实参数对一遍。</p>
     <div class="hero-cards">
-      <a class="hero-card" href="#principle"><small>01</small><b>原理</b><span>成像、焦距、光圈、景深、透视、衍射</span></a>
-      <a class="hero-card" href="#nikon"><small>02</small><b>尼康镜头</b><span>20 支 Z 卡口镜头的参数与读法</span></a>
+      <a class="hero-card" href="#principle"><small>01</small><b>原理</b><span>成像、焦距、光圈、景深、透视、衍射、MTF</span></a>
+      <a class="hero-card" href="#nikon"><small>02</small><b>尼康镜头</b><span>20 支 Z 卡口镜头：参数、官方结构图与 MTF</span></a>
       <a class="hero-card" href="#viewfinder"><small>03</small><b>虚拟取景器</b><span>换镜头、调光圈，看画面怎么变</span></a>
       <a class="hero-card" href="#choose"><small>04</small><b>怎么选</b><span>按拍什么来挑焦段和光圈</span></a>
       <a class="hero-card" href="#sheet"><small>05</small><b>速查</b><span>公式和几个常见误区</span></a>
@@ -40,7 +40,7 @@
 <section class="block" id="principle">
   <div class="wrap">
     <div class="block-head"><span class="no">01</span><h2>原理</h2></div>
-    <p class="block-intro">镜头只做一件事：把物体上每个点发出的光，重新汇聚成传感器上的一个点。下面六个小节都是这句话的展开。</p>
+    <p class="block-intro">镜头只做一件事：把物体上每个点发出的光，重新汇聚成传感器上的一个点。下面七个小节都是这句话的展开。</p>
 
     <!-- 1.1 -->
     <article class="topic" id="p-imaging">
@@ -259,6 +259,36 @@
         <li><b>像素越密越早碰到。</b>4570 万像素的机身大约 f/8 起就能看出衍射，2450 万像素的可以多收大半档。</li>
       </ul>
     </article>
+
+    <!-- 1.7 -->
+    <article class="topic" id="p-mtf">
+      <h3><span class="idx">1.7</span>MTF：一张图看镜头有多锐</h3>
+      <p>拿一组黑白相间的线条给镜头拍。镜头越好，拍出来黑的越黑、白的越白；线条越细，越容易糊成灰色。<b>MTF</b>（调制传递函数）就是「拍出来的反差 ÷ 原本的反差」，1 是完美，0 是线条完全消失。厂家把它画成曲线：从画面中心一路量到角落。</p>
+      <div class="demo">
+        <div class="demo-grid">
+          <div class="stage"><span class="stage-cap">在曲线图上拖动，看那个位置的线条被拍成什么样</span><div id="mtf-stage"></div></div>
+          <div class="panel">
+            <div class="chips-label">镜头类型（示意）</div>
+            <div class="chips" id="mtf-set"></div>
+            <label class="ctl"><span class="name">离画面中心</span><output id="mtf-h-out"></output>
+              <input type="range" id="mtf-h" min="0" max="216" step="1" value="150"></label>
+            <div class="stats">
+              <div class="stat"><span class="k">10 线/mm（S / M）</span><span class="v" id="mtf-10"></span></div>
+              <div class="stat hl"><span class="k">30 线/mm（S / M）</span><span class="v" id="mtf-30"></span></div>
+            </div>
+            <div class="verdict" id="mtf-verdict"></div>
+            <a class="btn ghost" href="#n-official">看尼康镜头的官方 MTF 图 ↓</a>
+          </div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><b>红线：10 线/mm。</b>粗线条的反差，对应照片的通透感和对比度。好镜头在 0.9 以上。</li>
+        <li><b>蓝线：30 线/mm。</b>细线条的反差，对应分辨率和细节锐度。越高越锐。</li>
+        <li><b>实线 S、虚线 M。</b>S（弧矢）是顺着半径方向的线条，M（子午）是垂直于半径的线条。两条线分开，说明两个方向清晰程度不同（像散）。</li>
+        <li><b>怎么比。</b>曲线越高越好，越平说明中心到边角越一致。尼康的图是最大光圈下的数值，收一两档通常更好；各家画法不同，不同品牌之间不能直接比。</li>
+        <li><b>它说明不了的。</b>MTF 不反映畸变、暗角、色散、光斑形状和逆光表现，这些要看实拍。</li>
+      </ul>
+    </article>
   </div>
 </section>
 
@@ -266,7 +296,7 @@
 <section class="block" id="nikon">
   <div class="wrap">
     <div class="block-head"><span class="no">02</span><h2>尼康镜头</h2></div>
-    <p class="block-intro">尼康无反相机用 Z 卡口，镜头品牌叫尼克尔（NIKKOR）。下面先讲名字怎么读，再把 20 支镜头的真实参数代进上面的公式。</p>
+    <p class="block-intro">尼康无反相机用 Z 卡口，镜头品牌叫尼克尔（NIKKOR）。下面先讲名字怎么读，再把 20 支镜头的真实参数代进上面的公式，最后看官方的结构图和 MTF。</p>
 
     <article class="topic" id="n-name">
       <h3><span class="idx">2.1</span>镜头名怎么读</h3>
@@ -307,9 +337,28 @@
 
     <article class="topic" id="n-cards">
       <h3><span class="idx">2.4</span>镜头图鉴</h3>
-      <p>黄色的两行是按上面的公式现算的：视角由焦距算出，入瞳直径 = 焦距 ÷ 光圈值。镜身轮廓按真实的直径和长度等比例画，可以直接比大小。带 * 的数值见卡片下方的小注。</p>
-      <div class="chips" id="card-filters"></div>
+      <p>黄色的两行是按上面的公式现算的：视角由焦距算出，入瞳直径 = 焦距 ÷ 光圈值。配图可以在官方产品图和等比例轮廓之间切换，轮廓按真实的直径和长度画，可以直接比大小。带 * 的数值见卡片下方的小注。</p>
+      <div class="card-tools">
+        <div class="chips" id="card-filters"></div>
+        <div class="chips" id="fig-mode">
+          <button type="button" class="chip on" data-v="photo">官方产品图</button>
+          <button type="button" class="chip" data-v="shape">等比例轮廓</button>
+        </div>
+      </div>
       <div class="cards" id="cards"></div>
+    </article>
+
+    <article class="topic" id="n-official">
+      <h3><span class="idx">2.5</span>结构图与 MTF</h3>
+      <p>选一支镜头，看它的官方产品图、镜片结构图和 MTF 曲线图。结构图是把镜头沿光轴剖开的样子，上了颜色的是特殊镜片；MTF 图的读法见 <a href="#p-mtf">1.7</a>。</p>
+      <div class="off-shell">
+        <div class="off-head">
+          <select id="off-lens" aria-label="选择镜头"></select>
+          <a class="btn ghost" id="off-link" target="_blank" rel="noopener">尼康官网产品页 ↗</a>
+        </div>
+        <div id="off-body"></div>
+        <p class="off-credit">本节图片直接引用自尼康官网（imaging.nikon.com），版权归株式会社尼康所有。</p>
+      </div>
     </article>
   </div>
 </section>
@@ -402,7 +451,7 @@
   <div class="wrap">
     <p>这不是尼康官方页面。Nikon、NIKKOR 及各产品名称是株式会社尼康的商标，这里只作为举例使用。</p>
     <p>镜头参数取自尼康官网产品规格页（2026 年 11 月核对）。光学计算用的是薄透镜近似，目的是讲清原理：真实镜头的呼吸效应、口径蚀、像差没有计入，数值与实拍会有出入。</p>
-    <p>镜身轮廓、取景器里的场景都是示意图，不是产品外观。</p>
+    <p>产品图、镜片结构图和 MTF 曲线图直接引用自尼康官网（imaging.nikon.com），版权归株式会社尼康所有，没有存进本站的代码仓库。等比例轮廓和取景器里的场景是自绘的示意图。</p>
   </div>
 </footer>
 
@@ -414,6 +463,8 @@
 <script src="js/demo-aperture.js"></script>
 <script src="js/demo-dof.js"></script>
 <script src="js/demo-extra.js"></script>
+<script src="js/demo-mtf.js"></script>
+<script src="js/official.js"></script>
 <script src="js/nikon.js"></script>
 <script src="js/vf-scene.js"></script>
 <script src="js/viewfinder.js"></script>

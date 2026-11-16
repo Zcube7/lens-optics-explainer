@@ -133,3 +133,24 @@ test('卡片备注里写的数字能由公式算出', () => {
   near(LD.byId('z28400').fMax / LD.byId('z28400').fMin, 14.29, 0.01);
   near(LD.MOUNT.F.flange - LD.MOUNT.Z.flange, 30.5, 1e-9);
 });
+
+test('官方图片：20 支镜头都有地址，结构图图例与规格里的特殊镜片对得上', () => {
+  const Off = require('../js/official.js');
+  const WORD = { ED: 'ED', SED: '超级 ED', ASP: '非球面', ASPED: '非球面 ED', FL: '萤石', SR: 'SR', PF: 'PF' };
+  for (const L of LD.LENSES) {
+    const i = Off.info(L);
+    assert.ok(i, L.id + ' 缺少官方图片信息');
+    for (const u of [i.page, i.photo, ...i.construction.map(c => c.url), ...i.mtf.map(m => m.url)]) {
+      assert.ok(u.startsWith('https://imaging.nikon.com/imaging/lineup/lens/z-mount/'), u);
+    }
+    assert.equal(i.mtf.length, L.tc || L.kind === 'zoom' ? 2 : 1, L.id + ' MTF 张数');
+    assert.equal(i.construction.length, L.tc ? 2 : 1, L.id + ' 结构图张数');
+    // 两个独立出处互相印证：结构图图例（official.js） vs 规格表里的镜片说明（lenses.js 的 glass）
+    for (const g of i.legend) assert.ok(L.glass.includes(WORD[g.key]), L.id + ' 图例有 ' + g.zh + '，但规格里没有');
+    for (const k of ['FL', 'SR', 'PF', 'SED', 'ASPED']) {
+      assert.equal(L.glass.includes(WORD[k]), i.legend.some(g => g.key === k), L.id + ' ' + WORD[k]);
+    }
+  }
+  assert.equal(Off.info(LD.byId('z400f28')).mtf[1].label, '560mm f/4（启用增距镜）');
+  assert.equal(Off.info(LD.byId('z600f4')).mtf[1].label, '840mm f/5.6（启用增距镜）');
+});

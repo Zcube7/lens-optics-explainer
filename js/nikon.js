@@ -166,6 +166,7 @@
     ['fast', '大光圈 ≤f/1.8', function (L) { return L.nWide <= 1.8; }]
   ];
   var curFilter = 'all';
+  var figMode = 'photo';   // 卡片配图：photo = 尼康官网产品图；shape = 等比例轮廓
   var FIG_K = 0.6; // px / mm
 
   /** 等比例镜身侧面轮廓：左边是卡口，右边是前镜片 */
@@ -197,6 +198,10 @@
     return '<svg viewBox="0 0 ' + U.r1(W) + ' ' + U.r1(H) + '" width="' + U.r1(W) + '" height="' + U.r1(H) + '" xmlns="http://www.w3.org/2000/svg">' + p + '</svg>';
   }
 
+  function shapeFig(L) {
+    return '<div class="card-fig"><span class="yr">' + L.year + '</span>' + silhouette(L) + '<span class="scale">⌀' + L.dia + ' × ' + L.len + ' mm</span></div>';
+  }
+
   function rng(a, b, f) { return a === b ? f(a) : f(a) + '–' + f(b); }
   function n1(x) { return O.fmtNum(x, 1); }
 
@@ -222,15 +227,19 @@
       ['对角视角', L.fMin === L.fMax ? O.fmtAngle(O.aov(L.fMin, dg)) : O.fmtAngle(O.aov(L.fMin, dg)) + '–' + O.fmtAngle(O.aov(L.fMax, dg))],
       ['入瞳直径', rng(L.fMin / L.nWide, L.fMax / L.nTele, n1) + 'mm']
     ];
-    return '<article class="card' + (L.id === selected ? ' sel' : '') + '" data-id="' + L.id + '">' +
-      '<div class="card-fig"><span class="yr">' + L.year + '</span>' + silhouette(L) + '<span class="scale">⌀' + L.dia + ' × ' + L.len + ' mm</span></div>' +
+    var off = window.Official && window.Official.info(L);
+    var fig = figMode === 'photo' && off
+      ? '<div class="card-fig photo"><img loading="lazy" decoding="async" src="' + off.photo + '" alt="' + U.esc(L.name) + ' 官方产品图"><span class="yr">' + L.year + '</span><span class="scale">图：尼康官网</span></div>'
+      : shapeFig(L);
+    return '<article class="card' + (L.id === selected ? ' sel' : '') + '" data-id="' + L.id + '">' + fig +
       '<div class="card-body"><h4>' + U.esc(L.zh) + '<small>' + U.esc(L.name) + '</small></h4>' +
       '<div class="tags">' + tags.map(function (t, i) { return '<span class="tag' + (i > 1 ? ' y' : '') + '">' + t + '</span>'; }).join('') + '</div>' +
       '<dl class="spec">' + rows.map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') +
       calc.map(function (r) { return '<div class="calc"><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl>' +
       (L.filterNote || L.weightNote ? '<p class="fn">* ' + (L.filterNote ? '滤镜' + L.filterNote : '重量' + L.weightNote) + '</p>' : '') +
       '<p class="note">' + U.esc(L.note) + '</p>' +
-      '<button type="button" class="btn" data-go="' + L.id + '">放进取景器 →</button></div></article>';
+      '<div class="card-btns"><button type="button" class="btn" data-go="' + L.id + '">放进取景器 →</button>' +
+      '<button type="button" class="btn ghost" data-off="' + L.id + '">结构图 · MTF</button></div></div></article>';
   }
 
   function cardsRender() {
@@ -240,9 +249,76 @@
 
   function select(id, src) {
     if (!LD.byId(id)) return;
-    selected = id; mapRender();
+    selected = id; mapRender(); officialRender();
     U.$$('#cards .card').forEach(function (c) { c.classList.toggle('sel', c.getAttribute('data-id') === id); });
     if (src !== 'vf') U.bus.emit('lens', { id: id, src: 'nikon' });
+  }
+
+  // =====================================================================
+  // 2.5 结构图与 MTF（尼康官网图片，直接引用，不存进仓库）
+  // =====================================================================
+  var offSt = { cons: 0, mtf: 0 };
+
+  function paper(url, alt, page) {
+    return '<div class="paper"><img loading="lazy" decoding="async" src="' + url + '" alt="' + U.esc(alt) + '">' +
+      '<a class="paper-miss" href="' + page + '" target="_blank" rel="noopener">图片没有加载出来，点这里到尼康官网查看 ↗</a></div>';
+  }
+  function tabs(kind, items, cur) {
+    if (items.length < 2) return items[0].label ? '<div class="off-sub">' + U.esc(items[0].label) + '</div>' : '';
+    return '<div class="chips">' + items.map(function (it, i) {
+      return '<button type="button" class="chip' + (i === cur ? ' on' : '') + '" data-tab="' + kind + '" data-i="' + i + '">' + U.esc(it.label) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function officialRender() {
+    var box = U.byId('off-body'); if (!box || !window.Official) return;
+    var L = LD.byId(selected), off = window.Official.info(L); if (!off) return;
+    var sel = U.byId('off-lens'); if (sel.value !== L.id) sel.value = L.id;
+    offSt.cons = Math.min(offSt.cons, off.construction.length - 1); offSt.mtf = Math.min(offSt.mtf, off.mtf.length - 1);
+    U.byId('off-link').href = off.page;
+    var corner = L.format === 'DX' ? '14.2' : '21.6';
+    var legend = off.legend.map(function (g) {
+      return '<li><i style="background:' + g.c + '"></i><div><b>' + g.zh + '</b>' + g.d + '</div></li>';
+    }).join('');
+    box.innerHTML =
+      '<div class="off-row">' +
+        '<figure class="off-fig"><figcaption><b>产品图</b></figcaption>' + paper(off.photo, L.name + ' 官方产品图', off.page) + '</figure>' +
+        '<div class="off-info"><h4>' + U.esc(L.zh) + '</h4>' +
+          '<dl class="spec"><div><dt>镜片结构</dt><dd>' + L.elements + ' 片 ' + L.groups + ' 组</dd></div>' +
+          '<div><dt>光圈叶片</dt><dd>' + L.blades + ' 片</dd></div>' +
+          '<div><dt>最近对焦</dt><dd>' + L.mfd + ' m</dd></div>' +
+          '<div><dt>尺寸</dt><dd>⌀' + L.dia + ' × ' + L.len + ' mm</dd></div></dl>' +
+          '<p class="off-glass">' + U.esc(L.glass) + '</p>' +
+          '<p class="note">' + U.esc(L.note) + '</p>' +
+          '<button type="button" class="btn" id="off-go">放进取景器 →</button></div>' +
+      '</div>' +
+      '<div class="off-row two">' +
+        '<figure class="off-fig"><figcaption><b>镜片结构图</b>' + tabs('cons', off.construction, offSt.cons) + '</figcaption>' +
+          paper(off.construction[offSt.cons].url, L.name + ' 镜片结构图', off.page) +
+          '<ul class="off-legend">' + legend + '<li><i style="background:#fff"></i><div><b>普通镜片</b>白色的是普通光学玻璃。左边是镜头前端，右边是卡口。</div></li></ul></figure>' +
+        '<figure class="off-fig"><figcaption><b>MTF 曲线图</b>' + tabs('mtf', off.mtf, offSt.mtf) + '</figcaption>' +
+          paper(off.mtf[offSt.mtf].url, L.name + ' MTF 曲线图', off.page) +
+          '<ul class="off-legend plain"><li><div><b>横轴</b>离画面中心的距离（mm）。' + L.format + ' 画幅的角落在 ' + corner + 'mm 处。</div></li>' +
+          '<li><div><b>纵轴</b>反差，1 是满分。曲线越高、越平越好。</div></li>' +
+          '<li><div><b>红线 10 线/mm</b> 看反差和通透感；<b>蓝线 30 线/mm</b> 看分辨率。实线 S、虚线 M 是两个方向，贴得越近越好。</div></li>' +
+          '<li><div>图是最大光圈下的数值。读法见 <a href="#p-mtf">1.7</a>。</div></li></ul></figure>' +
+      '</div>';
+  }
+
+  function officialInit() {
+    var sel = U.byId('off-lens'); if (!sel) return;
+    function opts(kind) { return LD.LENSES.filter(function (L) { return L.kind === kind; }).map(function (L) { return '<option value="' + L.id + '">' + U.esc(L.name.replace('NIKKOR ', '')) + '</option>'; }).join(''); }
+    sel.innerHTML = '<optgroup label="定焦">' + opts('prime') + '</optgroup><optgroup label="变焦">' + opts('zoom') + '</optgroup>';
+    sel.addEventListener('change', function () { select(sel.value); });
+    var box = U.byId('off-body');
+    box.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-tab]');
+      if (t) { offSt[t.getAttribute('data-tab')] = +t.getAttribute('data-i'); officialRender(); return; }
+      if (e.target.id === 'off-go') { U.bus.emit('lens', { id: selected, src: 'nikon' }); U.byId('viewfinder').scrollIntoView(); }
+    });
+    // 图片加载失败时显示「去官网看」的链接
+    box.addEventListener('error', function (e) { if (e.target.tagName === 'IMG') e.target.closest('.paper').classList.add('miss'); }, true);
+    officialRender();
   }
 
   // =====================================================================
@@ -282,10 +358,19 @@
       var id = e.target.getAttribute && e.target.getAttribute('data-id'); if (id) select(id);
     });
     U.byId('cards').addEventListener('click', function (e) {
-      var go = e.target.closest('[data-go]'), cardEl = e.target.closest('.card');
+      var go = e.target.closest('[data-go]'), offBtn = e.target.closest('[data-off]'), cardEl = e.target.closest('.card');
       if (go) { select(go.getAttribute('data-go')); U.byId('viewfinder').scrollIntoView(); }
+      else if (offBtn) { select(offBtn.getAttribute('data-off')); U.byId('n-official').scrollIntoView(); }
       else if (cardEl) select(cardEl.getAttribute('data-id'));
     });
+    // 官方图加载失败（断网、地址变了）时，卡片退回等比例轮廓
+    U.byId('cards').addEventListener('error', function (e) {
+      var fig = e.target.tagName === 'IMG' && e.target.closest('.card-fig.photo'); if (!fig) return;
+      var L = LD.byId(fig.closest('.card').getAttribute('data-id'));
+      var tmp = document.createElement('div'); tmp.innerHTML = shapeFig(L); fig.replaceWith(tmp.firstChild);
+    }, true);
+    U.chipGroup('fig-mode', null, function (v) { figMode = v; cardsRender(); });
+    officialInit();
     U.bus.on('lens', function (ev) { if (ev.src === 'vf') select(ev.id, 'vf'); });
   }
 
