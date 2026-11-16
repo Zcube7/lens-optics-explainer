@@ -29,7 +29,7 @@ js/official.js        尼康官网产品图 / 结构图 / MTF 图的地址与图
 js/nikon.js           板块二与板块四
 js/vf-scene.js        取景器里的场景：每样东西的真实尺寸和位置（以及 CSS 后备版的画法）
 js/vf-shader.js       取景器的 GLSL：薄透镜相机、光圈面采样、场景求交与着色、点光源光斑
-js/vf-gl.js           WebGL2 渲染器：编译、喂数据、逐帧累加，按帧率自动调样本数和分辨率
+js/vf-gl.js           WebGL2 渲染器：编译、喂数据、逐帧累加；实测单个样本的耗时来定每帧样本数和分辨率
 js/viewfinder.js      取景器：控件、读数；没有 WebGL2 时退回 CSS 版场景（地址加 ?nogl 可强制）
 data/nikon_specs_verified.json   镜头参数的官网核对记录（含来源链接与各地区官网不一致之处）
 tests/optics.test.js  自检

@@ -16,7 +16,7 @@
     var par = gl.getExtension('KHR_parallel_shader_compile');
 
     var api = { ready: false, failed: false, onready: null, count: 0, passes: 2, scale: 1, info: '' };
-    var P = null, dirty = true, raf = 0, lastT = 0, acc = null, fbo = null, loc = {}, rloc = {};
+    var P = null, dirty = true, raf = 0, acc = null, fbo = null, loc = {}, rloc = {};
 
     function shader(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
     function program(vs, fs) { var p = gl.createProgram(); gl.attachShader(p, vs); gl.attachShader(p, fs); gl.bindAttribLocation(p, 0, 'aPos'); gl.linkProgram(p); return p; }
@@ -132,22 +132,36 @@
     var tmo = 0;
     function schedule() {
       if (raf || tmo) return;
-      raf = requestAnimationFrame(function (t) { tick(t, true); });
-      tmo = setTimeout(function () { tick(performance.now(), false); }, 300);
+      raf = requestAnimationFrame(function () { tick(performance.now()); });
+      tmo = setTimeout(function () { tick(performance.now()); }, 300);
     }
-    function tick(t, fromRaf) {
+    /**
+     * 量一下这台机器画一个样本要多久，据此定每帧画几个样本、要不要降分辨率。
+     * 用 readPixels 等 GPU 真画完再计时——不能看 rAF 的帧间隔，页面在后台时浏览器会把 rAF 降到每秒一两次，
+     * 那不是显卡慢。
+     */
+    var px1 = new Uint8Array(4), calKey = '';
+    function timed(n) { var t0 = performance.now(); step(n); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px1); return performance.now() - t0; }
+    function measure() {       // readPixels 自己有二三十毫秒的固定开销，所以画 1 个和画 5 个各量一次、取差值
+      timed(1); var a = timed(1), b = timed(5);
+      return Math.max((b - a) / 4, 0.05);
+    }
+    function calibrate() {
+      if (api.scale !== 1) { api.scale = 1; resize(P.cssW, P.cssH); }               // 每次都从满分辨率量起，量错了下次能恢复
+      var ms = measure();
+      if (ms > 24) { api.scale = Math.max(0.5, Math.sqrt(14 / ms)); resize(P.cssW, P.cssH); ms = measure(); }   // 一个样本都画不进一帧：降分辨率
+      api.msPerPass = ms; api.passes = Math.max(1, Math.min(8, Math.floor(13 / ms)));
+      calKey = P.cssW + 'x' + P.cssH;
+    }
+    function tick() {
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
       if (tmo) { clearTimeout(tmo); tmo = 0; }
       if (!api.ready || !P) return;
-      var dt = t - lastT; lastT = t;
-      if (fromRaf && !dirty && dt > 0 && dt < 500) {         // 按帧间隔调每帧的样本数；太慢就降分辨率
-        if (dt > 45 && api.passes > 1) api.passes--;
-        else if (dt < 22 && api.passes < 8) api.passes++;
-        else if (dt > 140 && api.passes === 1 && api.scale > 0.55) { api.scale *= 0.8; resize(P.cssW, P.cssH); }
-      }
-      step(dirty ? Math.min(api.passes, 2) : api.passes);
+      if (calKey !== P.cssW + 'x' + P.cssH) calibrate();      // 只在刚就绪、画面尺寸变了、页面从后台回来时量
+      step(api.passes);                                      // 参数刚变的那一帧也画满样本数，拖动时噪点少
       if (api.count < TARGET) schedule();
     }
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { calKey = ''; if (api.ready && P) { dirty = true; schedule(); } } });
 
     /** 参数变化：重新开始累加 */
     function set(params) {
