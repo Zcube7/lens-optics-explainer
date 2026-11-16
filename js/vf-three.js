@@ -363,7 +363,9 @@ function create(canvas, hooks = {}) {
       while (tasks.length) {
         const t = tasks.shift();
         try { await t(); } catch (e) { console.warn('[取景器] 有一项素材没加载上，先不管它。', e); }
-        done++; scene.updateMatrixWorld(true); renderer.shadowMap.needsUpdate = true; dirty = true; if (P) schedule();
+        done++; scene.updateMatrixWorld(true); renderer.shadowMap.needsUpdate = true; dirty = true;
+        calKey = '';                                          // 场景变重了，下一帧重新量一次每帧画多久
+        if (P) schedule();
         hooks.ondetail && hooks.ondetail(done, total);
       }
     };
