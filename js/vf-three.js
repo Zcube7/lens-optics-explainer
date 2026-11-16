@@ -20,7 +20,7 @@ const NEAR = 0.05, FAR = 4000;
 const ENV_ROT = THREE.MathUtils.degToRad(115);   // 把全景转到「陆家嘴的灯火在主体身后偏右」
 const CAPTURE_H = 1.6;              // 全景拍摄时相机离地高度（米），用来把下半球投影成地面
 const WALL = 11;                    // 拍摄点周围最近的游客大约在这个距离（米）：再远的东西都贴到一道弧形墙上
-const TUNE = { env: 1.0, bg: 1.0, boost: 14, exposure: 1.0 };
+const TUNE = { env: 0.7, envLdr: 1.5, bg: 1.0, boost: 14, exposure: 1.0 };
 
 const V = (x, y, z) => new THREE.Vector3(x, y, -z);
 const R2 = (i, a) => { const v = (0.5 + i * a) % 1; return v < 0 ? v + 1 : v; };
@@ -213,31 +213,40 @@ function create(canvas, hooks = {}) {
     rtC = new THREE.WebGLRenderTarget(w, h, { depthBuffer: true, depthTexture: new THREE.DepthTexture(w, h), minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
   }
 
-  // ---------- 搭场景 ----------
-  const manager = new THREE.LoadingManager();
-  manager.onProgress = (u, n, t) => hooks.onprogress && hooks.onprogress(n / Math.max(t, 30));
-  const gltf = new GLTFLoader(manager);
-  const loadModel = (id, res) => gltf.loadAsync(`${ASSETS}models/${id}/${id}_${res}.gltf`).then(g => {
-    g.scene.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => { if (m.transmission) m.transmission = 0; }); } });
-    return g.scene;
-  });
+  // ---------- 搭场景（分两段加载） ----------
+  // 第一段只要约 1 MB：2k 的全景预览 + 1k 贴图的胸像，加上不用下载的底座、路牌、彩灯，先把画面拍出来；
+  // 第二段在后台陆续补：路灯、提灯、HDR 环境光、盆栽、猫石像、胸像的 2k 贴图、8k 全景。每补上一样就重拍一次。
+  const m1 = new THREE.LoadingManager(), m2 = new THREE.LoadingManager();
+  m1.onProgress = (u, n, t) => hooks.onprogress && hooks.onprogress(n / Math.max(t, 6));
+  const fixModel = g => { g.scene.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m.transmission) m.transmission = 0; }); }); return g.scene; };
+  const loadModel = (mgr, id, res) => new GLTFLoader(mgr).loadAsync(`${ASSETS}models/${id}/${id}_${res}.gltf`).then(fixModel);
+  const loadTex = (mgr, url) => new THREE.TextureLoader(mgr).loadAsync(ASSETS + url);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: .5, metalness: .8 });
+  let shadow = null, pool = null, bustMesh = null;
+
+  function rebuildLights() {                // 点光源的实例化圆盘：灯多了就重建一次
+    const n = lights.length, g = new THREE.InstancedBufferGeometry(); g.index = quadGeo.index; g.setAttribute('position', quadGeo.getAttribute('position')); g.instanceCount = n;
+    const pos = new Float32Array(n * 3), rad = new Float32Array(n), col = new Float32Array(n * 3), lmp = new Float32Array(n);
+    lights.forEach((l, i) => { l.p.toArray(pos, i * 3); rad[i] = l.r; col[i * 3] = l.c[0] * l.k; col[i * 3 + 1] = l.c[1] * l.k; col[i * 3 + 2] = l.c[2] * l.k; lmp[i] = l.lamp; });
+    g.setAttribute('iPos', new THREE.InstancedBufferAttribute(pos, 3)); g.setAttribute('iR', new THREE.InstancedBufferAttribute(rad, 1));
+    g.setAttribute('iCol', new THREE.InstancedBufferAttribute(col, 3)); g.setAttribute('iLamp', new THREE.InstancedBufferAttribute(lmp, 1));
+    if (lightMesh) lightMesh.geometry = g;
+    else { lightMesh = new THREE.Mesh(g, lightMat); lightMesh.frustumCulled = false; api.lightScene = new THREE.Scene(); api.lightScene.add(lightMesh); }
+  }
 
   async function build() {
-    const [hdr, pano, bust, lamp, lantern, plant, cat] = await Promise.all([
-      new HDRLoader(manager).loadAsync(ASSETS + 'env/shanghai_bund_1k.hdr'),
-      new THREE.TextureLoader(manager).loadAsync(ASSETS + 'env/shanghai_bund.jpg'),
-      loadModel('marble_bust_01', '2k'), loadModel('street_lamp_01', '1k'), loadModel('Lantern_01', '1k'), loadModel('potted_plant_02', '1k'), loadModel('concrete_cat_statue', '1k')
-    ]);
+    const [pano, bust] = await Promise.all([loadTex(m1, 'env/shanghai_bund_preview.jpg'), loadModel(m1, 'marble_bust_01', '1k')]);
 
-    // 环境光：用同一张全景的 HDR 版照亮所有物体
-    hdr.mapping = THREE.EquirectangularReflectionMapping;
-    const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(hdr).texture; hdr.dispose(); pm.dispose();
-    scene.environmentRotation.y = ENV_ROT; scene.environmentIntensity = TUNE.env;
+    // 环境光：先用预览图凑合（没有高光，亮度补一点），HDR 到了再换
+    pano.colorSpace = THREE.SRGBColorSpace; pano.anisotropy = renderer.capabilities.getMaxAnisotropy(); pano.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = pmrem.fromEquirectangular(pano).texture; scene.environmentRotation.y = ENV_ROT; scene.environmentIntensity = TUNE.envLdr;
 
-    // 背景：全景的下半球压成地面
-    pano.colorSpace = THREE.SRGBColorSpace; pano.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    bg = new THREE.Mesh(domeGeometry(900, CAPTURE_H, WALL, ENV_ROT), new THREE.ShaderMaterial({ side: THREE.DoubleSide, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }', fragmentShader: BG_FRAG, uniforms: { map: { value: pano }, uGain: { value: TUNE.bg }, uBoost: { value: TUNE.boost } } }));
-    bg.position.y = CAPTURE_H; bg.frustumCulled = false; bg.updateMatrixWorld(); scene.add(bg); api.bg = bg;
+    // 背景：全景贴在穹顶上
+    bg = new THREE.Mesh(domeGeometry(900, CAPTURE_H, WALL, ENV_ROT), new THREE.ShaderMaterial({ side: THREE.DoubleSide,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }', fragmentShader: BG_FRAG,
+      uniforms: { map: { value: pano }, uGain: { value: TUNE.bg }, uBoost: { value: TUNE.boost } } }));
+    bg.position.y = CAPTURE_H; bg.frustumCulled = false; scene.add(bg); api.bg = bg;
 
     const shadowTex = radialTexture([[0, 'rgba(0,0,0,.85)'], [.45, 'rgba(0,0,0,.5)'], [1, 'rgba(0,0,0,0)']]);
     const poolTex = radialTexture([[0, 'rgba(255,196,120,.55)'], [.4, 'rgba(255,170,90,.2)'], [1, 'rgba(255,150,70,0)']]);
@@ -245,43 +254,17 @@ function create(canvas, hooks = {}) {
       const m = new THREE.Mesh(new THREE.CircleGeometry(r, 40), new THREE.MeshBasicMaterial(Object.assign({ map: tex, transparent: true, depthWrite: false }, opts)));
       m.rotation.x = -Math.PI / 2; m.position.copy(V(x, y, z)); scene.add(m); return m;
     };
-    const shadow = (x, z, r, o) => decal(shadowTex, x, z, r, .012, { opacity: o || .7 });
-    const pool = (x, z, r, o) => decal(poolTex, x, z, r, .018, { opacity: o || .5, blending: THREE.AdditiveBlending });
+    shadow = (x, z, r, o) => decal(shadowTex, x, z, r, .012, { opacity: o || .7 });
+    pool = (x, z, r, o) => decal(poolTex, x, z, r, .018, { opacity: o || .5, blending: THREE.AdditiveBlending });
 
     // 主体：底座 + 胸像。眼睛大致落在 Z=0 的对焦平面上
     const H = 1.0, BUST = 1.3;       // 胸像原件约是真人的八成大，放大到等身
     const base = plinth(H); base.position.copy(V(0, 0, .11)); scene.add(base);
-    bust.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+    bust.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; bustMesh = bustMesh || o; } });
     bust.scale.setScalar(BUST); bust.position.copy(V(0, H, .11)); scene.add(bust); api.bust = bust;
     shadow(0, .11, .75, .8);
 
-    // 猫石像，蹲在底座旁
-    cat.scale.setScalar(1.3); cat.position.copy(V(.62, 0, -.18)); cat.rotation.y = -.5; scene.add(cat); api.cat = cat; shadow(.62, -.18, .45, .7);
-
-    // 路灯：左右交错往远处排
-    const LAMPS = [[-2.6, 4], [2.6, 9.2], [-3.4, 16], [3.6, 23], [-8, 13], [8.5, 18], [-12, 24], [13, 27]];
-    LAMPS.forEach(([x, z], i) => {
-      const l = lamp.clone(); l.position.copy(V(x, 0, z)); l.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(l);
-      lights.push({ p: V(x, 3.265, z), r: .055, c: [1, .78, .46], k: 60, lamp: 1 });
-      shadow(x, z, .5, .6); pool(x, z, 4.2, .42);
-      if (i < 4) { const pl = new THREE.PointLight(0xffc98a, 70, 26, 2); pl.position.copy(V(x, 3.2, z)); scene.add(pl); }
-    });
-
-    // 提灯：放在地上，暖光
-    [[-.78, .55, .4], [1.25, 2.4, -.6], [-1.7, 5.2, 1.1], [1.9, 7.4, 2.0]].forEach(([x, z, rot]) => {
-      const l = lantern.clone(); l.scale.setScalar(1.25); l.position.copy(V(x, 0, z)); l.rotation.y = rot; scene.add(l);
-      lights.push({ p: V(x, .12, z), r: .028, c: [1, .55, .2], k: 16, lamp: 0 });
-      pool(x, z, 1.1, .5); shadow(x, z, .16, .6);
-      const pl = new THREE.PointLight(0xff9a4a, 2.2, 5, 2); pl.position.copy(V(x, .2, z)); scene.add(pl);
-    });
-
-    // 盆栽
-    [[-1.95, 2.2, 1.0, 0], [1.95, 4.6, 1.15, 2], [-2.1, 7.6, 1.1, 4], [3.3, 8.6, 1.2, 1], [-4.2, 4.4, 1.2, 3]].forEach(([x, z, s, rot]) => {
-      const p = plant.clone(); p.scale.setScalar(s); p.position.copy(V(x, 0, z)); p.rotation.y = rot; scene.add(p); shadow(x, z, .5 * s, .65);
-    });
-
-    // 路牌：主体后方多少米
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: .5, metalness: .8 });
+    // 路牌：主体后方多少米。20 m 那块立在高杆上，不然会被游客挡住
     [[2, 1.05], [5, 1.05], [10, 1.05], [20, 2.45]].forEach(([z, sy]) => {
       const tex = signTexture(z + ' m');
       const plate = new THREE.Mesh(new THREE.PlaneGeometry(.6, .375), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: .32, roughness: .55, metalness: .1 }));
@@ -296,10 +279,7 @@ function create(canvas, hooks = {}) {
     const wireMat = new THREE.MeshBasicMaterial({ color: 0x050506 });
     [[6, 4.2, 13, 2.75, .5], [9.5, 6, 17, 3.35, .7], [15, 7.5, 19, 3.2, .8], [24, 9.5, 23, 4.5, 1.0]].forEach(([z, half, n, yEnd, sag], si) => {
       const pts = [];
-      for (let i = 0; i < n; i++) {
-        const u = -1 + 2 * i / (n - 1), y = yEnd - sag * (1 - u * u);
-        lights.push({ p: V(u * half, y - .04, z), r: .028, c: PAL[(i + si) % 5], k: 7, lamp: 0 });
-      }
+      for (let i = 0; i < n; i++) { const u = -1 + 2 * i / (n - 1); lights.push({ p: V(u * half, yEnd - sag * (1 - u * u) - .04, z), r: .028, c: PAL[(i + si) % 5], k: 7, lamp: 0 }); }
       for (let i = 0; i <= 40; i++) { const u = -1 + i / 20; pts.push(V(u * half, yEnd - sag * (1 - u * u), z)); }
       scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, .006, 5), wireMat));
       [-half, half].forEach(x => { const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .04, yEnd + .05, 12), postMat); pole.position.copy(V(x, (yEnd + .05) / 2, z)); scene.add(pole); shadow(x, z, .2, .5); });
@@ -314,24 +294,81 @@ function create(canvas, hooks = {}) {
     // 月亮：跟着相机走的一张远处的圆片
     const md = 820, mr = md * Math.tan(THREE.MathUtils.degToRad(.26));
     moon = new THREE.Mesh(new THREE.CircleGeometry(mr, 64), new THREE.MeshBasicMaterial({ map: moonTexture(), transparent: true }));
-    moon.userData.dir = (() => { const az = THREE.MathUtils.degToRad(hooks.moon ? hooks.moon.az : 7), el = THREE.MathUtils.degToRad(hooks.moon ? hooks.moon.el : 9.5); return V(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(md); })();
+    moon.userData.dir = (() => { const az = THREE.MathUtils.degToRad(hooks.moon ? hooks.moon.az : -9), el = THREE.MathUtils.degToRad(hooks.moon ? hooks.moon.el : 31); return V(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(md); })();
     scene.add(moon);
 
-    // 点光源：实例化的圆盘
-    const n = lights.length, g = new THREE.InstancedBufferGeometry(); g.index = quadGeo.index; g.setAttribute('position', quadGeo.getAttribute('position')); g.instanceCount = n;
-    const pos = new Float32Array(n * 3), rad = new Float32Array(n), col = new Float32Array(n * 3), lmp = new Float32Array(n);
-    lights.forEach((l, i) => { l.p.toArray(pos, i * 3); rad[i] = l.r; col[i * 3] = l.c[0] * l.k; col[i * 3 + 1] = l.c[1] * l.k; col[i * 3 + 2] = l.c[2] * l.k; lmp[i] = l.lamp; });
-    g.setAttribute('iPos', new THREE.InstancedBufferAttribute(pos, 3)); g.setAttribute('iR', new THREE.InstancedBufferAttribute(rad, 1));
-    g.setAttribute('iCol', new THREE.InstancedBufferAttribute(col, 3)); g.setAttribute('iLamp', new THREE.InstancedBufferAttribute(lmp, 1));
     lightMat = new THREE.ShaderMaterial({
       vertexShader: LIGHT_VERT, fragmentShader: LIGHT_FRAG, depthTest: false, depthWrite: false,
       blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
       uniforms: { uView: { value: new THREE.Matrix4() }, uProjC: { value: new THREE.Matrix4() }, uRes: { value: new THREE.Vector2() }, uK: { value: 1 }, uA: { value: 0 }, uInvS: { value: 0 }, uGlare: { value: .16 },
         uPolyAmt: { value: 0 }, uBlades: { value: 9 }, uNear: { value: NEAR }, uFar: { value: FAR }, tDepth: { value: null } }
     });
-    lightMesh = new THREE.Mesh(g, lightMat); lightMesh.frustumCulled = false;
-    api.lightScene = new THREE.Scene(); api.lightScene.add(lightMesh);
+    rebuildLights();
     scene.updateMatrixWorld(true);
+  }
+
+  // 第二段：按「先补最显眼的」排好，两条队列并行取
+  async function detail() {
+    const LAMPS = [[-2.6, 4], [2.6, 9.2], [-3.4, 16], [3.6, 23], [-8, 13], [8.5, 18], [-12, 24], [13, 27]];
+    const tasks = [
+      async () => {                                           // 路灯：左右交错往远处排
+        const lamp = await loadModel(m2, 'street_lamp_01', '1k');
+        LAMPS.forEach(([x, z], i) => {
+          const l = lamp.clone(); l.position.copy(V(x, 0, z)); l.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(l);
+          lights.push({ p: V(x, 3.265, z), r: .055, c: [1, .78, .46], k: 60, lamp: 1 });
+          shadow(x, z, .5, .6); pool(x, z, 4.2, .42);
+          if (i < 4) { const pl = new THREE.PointLight(0xffc98a, 26, 26, 2); pl.position.copy(V(x, 3.2, z)); scene.add(pl); }
+        });
+        rebuildLights();
+      },
+      async () => {                                           // 提灯：放在地上，暖光
+        const lantern = await loadModel(m2, 'Lantern_01', '1k');
+        [[-.78, .55, .4], [1.25, 2.4, -.6], [-1.7, 5.2, 1.1], [1.9, 7.4, 2.0]].forEach(([x, z, rot]) => {
+          const l = lantern.clone(); l.scale.setScalar(1.25); l.position.copy(V(x, 0, z)); l.rotation.y = rot; scene.add(l);
+          lights.push({ p: V(x, .12, z), r: .028, c: [1, .55, .2], k: 16, lamp: 0 });
+          pool(x, z, 1.1, .5); shadow(x, z, .16, .6);
+          const pl = new THREE.PointLight(0xff9a4a, 2.2, 5, 2); pl.position.copy(V(x, .2, z)); scene.add(pl);
+        });
+        rebuildLights();
+      },
+      async () => {                                           // 真正的 HDR 环境光
+        const hdr = await new HDRLoader(m2).loadAsync(ASSETS + 'env/shanghai_bund_1k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
+        const old = scene.environment; scene.environment = pmrem.fromEquirectangular(hdr).texture; scene.environmentIntensity = TUNE.env; old.dispose(); hdr.dispose();
+      },
+      async () => {                                           // 盆栽
+        const plant = await loadModel(m2, 'potted_plant_02', '1k');
+        [[-1.95, 2.2, 1.0, 0], [1.95, 4.6, 1.15, 2], [-2.1, 7.6, 1.1, 4], [3.3, 8.6, 1.2, 1], [-4.2, 4.4, 1.2, 3]].forEach(([x, z, sc, rot]) => {
+          const p = plant.clone(); p.scale.setScalar(sc); p.position.copy(V(x, 0, z)); p.rotation.y = rot; scene.add(p); shadow(x, z, .5 * sc, .65);
+        });
+      },
+      async () => {                                           // 猫石像，蹲在底座旁
+        const cat = await loadModel(m2, 'concrete_cat_statue', '1k');
+        cat.scale.setScalar(1.3); cat.position.copy(V(.62, 0, -.18)); cat.rotation.y = -.5; scene.add(cat); shadow(.62, -.18, .45, .7);
+      },
+      async () => {                                           // 胸像换 2k 贴图
+        const mat = bustMesh.material, base = 'models/marble_bust_01/textures/marble_bust_01_';
+        const [d, n, r] = await Promise.all(['diff', 'nor_gl', 'rough'].map(k => loadTex(m2, base + k + '_2k.jpg')));
+        const like = (t, o) => { t.flipY = o.flipY; t.wrapS = o.wrapS; t.wrapT = o.wrapT; t.colorSpace = o.colorSpace; t.anisotropy = 8; t.needsUpdate = true; return t; };
+        const old = [mat.map, mat.normalMap, mat.roughnessMap], sameMR = mat.metalnessMap === mat.roughnessMap;
+        mat.map = like(d, old[0]); mat.normalMap = like(n, old[1]); mat.roughnessMap = like(r, old[2]); if (sameMR) mat.metalnessMap = mat.roughnessMap;
+        mat.needsUpdate = true; old.forEach(t => t && t.dispose());
+      },
+      async () => {                                           // 8k 全景
+        const hi = await loadTex(m2, 'env/shanghai_bund.jpg'); hi.colorSpace = THREE.SRGBColorSpace; hi.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        const old = bg.material.uniforms.map.value; bg.material.uniforms.map.value = hi; old.dispose();
+      }
+    ];
+    const total = tasks.length; let done = 0;
+    const worker = async () => {
+      while (tasks.length) {
+        const t = tasks.shift();
+        try { await t(); } catch (e) { console.warn('[取景器] 有一项素材没加载上，先不管它。', e); }
+        done++; scene.updateMatrixWorld(true); renderer.shadowMap.needsUpdate = true; dirty = true; if (P) schedule();
+        hooks.ondetail && hooks.ondetail(done, total);
+      }
+    };
+    await Promise.all([worker(), worker()]);
+    pmrem.dispose();
   }
 
   // ---------- 相机 ----------
@@ -411,7 +448,7 @@ function create(canvas, hooks = {}) {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { calKey = ''; if (api.ready && P) { dirty = true; schedule(); } } });
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); api.ready = false; api.failed = true; hooks.onfail && hooks.onfail('context lost'); });
 
-  build().then(() => { api.ready = true; hooks.onready && hooks.onready(); if (P) { dirty = true; schedule(); } })
+  build().then(() => { api.ready = true; hooks.onready && hooks.onready(); if (P) { dirty = true; schedule(); } if (!hooks.noDetail) detail(); })
     .catch(e => { api.failed = true; api.info = String(e && e.message || e); console.warn('[取景器] 3D 场景加载失败，改用后备场景。', e); hooks.onfail && hooks.onfail(api.info); });
 
   Object.assign(api, { set, step, resize, renderer, camera, redraw() { dirty = true; schedule(); } });

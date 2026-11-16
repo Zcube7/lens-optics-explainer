@@ -73,6 +73,11 @@
           moon: S.MOON,
           onprogress: function (f) { el.loading.textContent = '场景加载中 ' + Math.round(Math.min(f, 1) * 100) + '%'; },
           onready: function () { el.scene.style.display = 'none'; el.canvas.style.display = 'block'; el.loading.style.display = 'none'; update(); },
+          ondetail: function (done, total) {
+            if (!el.detail) { el.detail = document.createElement('div'); el.detail.className = 'vf-detail'; el.frame.appendChild(el.detail); }
+            el.detail.textContent = '高清素材 ' + done + '/' + total; el.detail.style.display = done >= total ? 'none' : 'block';
+          },
+          noDetail: /[?&]vfstage=1\b/.test(location.search),
           onfail: function () { glr = null; fallback(); }
         });
         if (!glr) fallback();
