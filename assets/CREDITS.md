@@ -12,7 +12,7 @@
 | 盆栽 | Potted Plant 02 | glTF | <https://polyhaven.com/a/potted_plant_02> |
 | 猫石像 | Concrete Cat Statue | glTF | <https://polyhaven.com/a/concrete_cat_statue> |
 
-为了让页面加载得快，做过这些处理（脚本化缩放，没有改内容）：
+为了让页面加载得快，做过这些处理（只是缩放，没有改内容；下载和缩放的脚本在 `tools/`）：
 
 - `env/shanghai_bund_preview.jpg`：全景缩到 2048×1024 的预览版，页面先用它出画面，8k 原图随后替换。
 - `models/marble_bust_01/` 里的 `*_1k.jpg` 和 `marble_bust_01_1k.gltf`：胸像贴图的 1k 版，同样用于先出画面，2k 原图随后替换。

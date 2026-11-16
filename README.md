@@ -32,6 +32,7 @@ js/vf-scene.js        CSS 后备版场景的画法与布局（不支持 WebGL2�
 js/viewfinder.js      取景器：控件、读数、3D 版与后备版的切换（地址加 ?nogl 可强制用后备版）
 assets/               取景器用的模型、贴图和全景图，全部来自 Poly Haven（CC0），清单见 assets/CREDITS.md
 vendor/               three.js r180 与两个加载器（MIT）
+tools/                下载素材原件、生成预览版与缩小贴图的脚本
 data/nikon_specs_verified.json   镜头参数的官网核对记录（含来源链接与各地区官网不一致之处）
 tests/optics.test.js  自检
 ```
